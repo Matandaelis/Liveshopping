@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+// Prisma disabled - import removed to prevent build errors
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,10 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Save or update thesis document
-    // In production, query the Keystone thesis collection
-    // For now, return mock success
-
-    console.log('[v0] Thesis saved:', { title, userId, wordCount: content?.split(/\s+/).length });
+    // Database disabled during build - returns mock success
+    // Will be enabled after DATABASE_URL is configured
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+// Prisma disabled - import removed to prevent build errors
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,12 +12,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Query Stack Auth user table
-    // Note: In production, you would use proper password hashing verification
-    // This is a simplified example - use bcrypt or similar in production
+    // Mock authentication - database disabled during build
+    // Will be enabled to use Stack Auth after DATABASE_URL is configured
     
-    // For now, return mock token (will be replaced with real auth)
-    const mockToken = Buffer.from(JSON.stringify({ email, sub: '123' })).toString('base64');
+    const mockToken = Buffer.from(JSON.stringify({ email, sub: 'user-' + Date.now() })).toString('base64');
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+// Prisma disabled - import removed to prevent build errors
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,16 +19,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists in Stack Auth
-    // This would query neon_auth.user table
-    // For now, return success and send verification email
-    
-    // In production:
-    // 1. Check if user exists in neon_auth.user
-    // 2. Hash password with bcrypt
-    // 3. Create verification token
-    // 4. Send verification email
-    // 5. Return verification required message
+    // Mock signup - database disabled during build
+    // Will be enabled to use Stack Auth after DATABASE_URL is configured
 
     return NextResponse.json({
       success: true,
