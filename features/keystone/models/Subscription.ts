@@ -1,14 +1,14 @@
 import { list } from '@keystone-6/core'
 import { checkbox, relationship, select, text, timestamp } from '@keystone-6/core/fields'
-import { isAdmin, permissions } from '../access'
+import { isAdmin } from '../access'
 
 export const Subscription = list({
   access: {
     operation: {
       query: ({ session }) => !!session,
-      create: isAdmin,
-      update: isAdmin,
-      delete: isAdmin,
+      create: (args) => isAdmin(args),
+      update: (args) => isAdmin(args),
+      delete: (args) => isAdmin(args),
     },
     filter: {
       query: ({ session }) => 
