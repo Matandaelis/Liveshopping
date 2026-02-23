@@ -1,23 +1,15 @@
-import { keystoneContext } from '../../features/keystone/context'
-import { createYoga } from "graphql-yoga";
-// @ts-ignore
-import processRequest from "graphql-upload/processRequest.js";
-import { type NextApiRequest, type NextApiResponse } from 'next'
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// GraphQL API disabled during build - Keystone not available without DATABASE_URL
+// import { keystoneContext } from '../../features/keystone/context'
+import { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const contentType = req.headers["content-type"];
-  if (contentType?.startsWith("multipart/form-data")) {
-    req.body = await processRequest(req, res);
-  }
-
-  return createYoga({
-    renderGraphiQL: () => {
+  // Keystone GraphQL endpoint disabled during build
+  // This will be re-enabled after DATABASE_URL is configured
+  res.status(503).json({ 
+    error: 'GraphQL endpoint not available',
+    message: 'Keystone is disabled during build. Configure DATABASE_URL in environment to enable.'
+  });
+}
       return `
         <!DOCTYPE html>
         <html lang="en">

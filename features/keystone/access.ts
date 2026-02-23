@@ -25,6 +25,10 @@ export function isSignedIn({ session }: AccessArgs) {
   return Boolean(session)
 }
 
+export function isAdmin({ session }: AccessArgs) {
+  return session?.data.role?.canManagePeople ?? false
+}
+
 export const permissions = {
   canCreateTodos: ({ session }: AccessArgs) => session?.data.role?.canCreateTodos ?? false,
   canManageAllTodos: ({ session }: AccessArgs) => session?.data.role?.canManageAllTodos ?? false,
