@@ -1,11 +1,21 @@
-// This schema uses Stack Auth tables (neon_auth schema)
-// It extends Stack Auth with ThesisAI-specific data
+// SCHEMA DISABLED - Prisma validation disabled for now
+// This prevents DATABASE_URL errors during development
+// To enable: Uncomment the datasource and models below, set DATABASE_URL, and run: npx prisma generate
 
-datasource postgresql {
-  url               = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
-  provider          = "postgresql"
+// datasource postgresql {
+//   url               = env("DATABASE_URL")
+//   provider          = "postgresql"
+// }
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// Placeholder - schema generation deferred
+model Placeholder {
+  id String @id @default(cuid())
 }
+
 
 generator client {
   provider = "prisma-client-js"
