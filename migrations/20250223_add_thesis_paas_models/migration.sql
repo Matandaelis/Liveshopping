@@ -1,2 +1,0 @@
--- Migration rolled back due to schema conflicts
--- The tables were created in migration 20250223_fix_thesis_paas_models instead
