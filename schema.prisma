@@ -1,53 +1,304 @@
 // ============================================================================
-// PRISMA SCHEMA - COMPLETELY DISABLED FOR PRODUCTION BUILD
+// PRISMA SCHEMA - THESIS AI PLATFORM
 // ============================================================================
 // 
-// This schema file has been disabled to prevent Prisma validation errors
-// during Next.js build. The application runs WITHOUT database for now.
-//
-// TO RE-ENABLE DATABASE SUPPORT:
-// 1. Configure DATABASE_URL environment variable in Vercel
-// 2. Uncomment the datasource and generator sections below
+// IMPORTANT: Database is currently DISABLED for build compatibility
+// 
+// TO ENABLE DATABASE (Phase 1 of Implementation):
+// 1. Set DATABASE_URL in Vercel environment variables
+// 2. Uncomment lines 17-23 (datasource and generator)
 // 3. Run: npx prisma generate
 // 4. Run: npx prisma db push
-// 5. Re-enable PrismaClient imports in lib/db.ts, lib/stripe.ts, lib/subscriptions.ts
+// 5. Re-enable PrismaClient in: lib/db.ts, lib/stripe.ts, lib/subscriptions.ts
+// 6. Redeploy to Vercel
 //
+// This schema integrates with Stack Auth (neon_auth schema) for user auth
 // ============================================================================
 
-// DO NOT UNCOMMENT - WILL BREAK BUILD IF DATABASE_URL IS NOT SET
+// STEP 1: UNCOMMENT THESE LINES WHEN DATABASE_URL IS CONFIGURED
 // datasource postgresql {
 //   url      = env("DATABASE_URL")
 //   provider = "postgresql"
 // }
-
-// DO NOT UNCOMMENT - WILL BREAK BUILD IF DATABASE_URL IS NOT SET
+// 
+// STEP 2: UNCOMMENT THIS WHEN DATABASE_URL IS SET
 // generator client {
 //   provider = "prisma-client-js"
 // }
 
-// MODELS BELOW ARE FOR REFERENCE ONLY - NOT CURRENTLY GENERATED
-// Replace this entire file with the proper schema when enabling database
+// ============================================================================
+// USER & SUBSCRIPTION MODELS
+// ============================================================================
 
-model Document {
-  id        String    @id @default(cuid())
-  userId    String
-  title     String
-  content   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+model User {
+  id                String    @id @default(cuid()) @db.Uuid
+  email             String    @unique
+  name              String?
+  emailVerified     DateTime?
+  university        String?   // KU, KEMU, MKU, LAIKIPIA
+  subscriptionTier  String    @default("FREE") // FREE, PRO, PREMIUM, ENTERPRISE
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  subscription      Subscription?
+  documents         Document[]
+  citations         Citation[]
+  aiChats           AIChat[]
+  aiUsageStats      AIUsageStats?
+
+  @@index([email])
+  @@index([subscriptionTier])
 }
 
 model Subscription {
-  id     String @id @default(cuid())
-  userId String @unique
-  tier   String @default("FREE")
+  id                    String    @id @default(cuid())
+  userId                String    @unique @db.Uuid
+  tier                  String    @default("FREE") // FREE, PRO, PREMIUM, ENTERPRISE
+  stripeCustomerId      String?   @unique
+  stripeSubscriptionId  String?   @unique
+  stripePaymentMethodId String?
+  status                String    @default("ACTIVE") // ACTIVE, CANCELED, PAST_DUE, EXPIRED
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelledAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([tier])
 }
 
-model Citation {
-  id         String @id @default(cuid())
-  documentId String
-  title      String
-  authors    String?
-  year       Int?
+// ============================================================================
+// DOCUMENT & CONTENT MODELS
+// ============================================================================
+
+model Document {
+  id                String    @id @default(cuid())
+  userId            String    @db.Uuid
+  title             String
+  content           Json      @default("[]") // Tiptap JSON format
+  wordCount         Int       @default(0)
+  status            String    @default("DRAFT") // DRAFT, SUBMITTED, ARCHIVED, PUBLISHED
+  templateId        String?
+  isShared          Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  publishedAt       DateTime?
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template          ThesisTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  citations         Citation[]
+  plagiarismScans   PlagiarismScan[]
+  collaborators     DocumentShare[]
+  aiChats           AIChat[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([templateId])
 }
+
+model DocumentShare {
+  id                String    @id @default(cuid())
+  documentId        String
+  sharedWithEmail   String    // Email of shared user
+  permission        String    @default("VIEWER") // VIEWER, EDITOR, COMMENTER
+  createdAt         DateTime  @default(now())
+
+  document          Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, sharedWithEmail])
+  @@index([documentId])
+}
+
+// ============================================================================
+// CITATION MODELS
+// ============================================================================
+
+model Citation {
+  id                String    @id @default(cuid())
+  userId            String    @db.Uuid
+  documentId        String?
+  title             String
+  authors           String[]  // JSON array
+  year              Int?
+  publicationTitle  String?
+  pages             String?
+  doi               String?
+  url               String?
+  citationStyle     String    @default("APA") // APA, MLA, CHICAGO, HARVARD
+  formattedText     String?   @db.Text
+  source            String?   // URL, ISBN, DOI, etc.
+  createdAt         DateTime  @default(now())
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document          Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([citationStyle])
+}
+
+// ============================================================================
+// TEMPLATE MODELS
+// ============================================================================
+
+model ThesisTemplate {
+  id                  String    @id @default(cuid())
+  name                String
+  university          String    // KU, KEMU, MKU, LAIKIPIA
+  country             String    @default("Kenya")
+  description         String?
+  sections            Json      @default("[]") // Array of {name, required, description}
+  marginSettings      Json      @default("{}") // {top, bottom, left, right} in cm
+  fontSettings        Json      @default("{}") // {family, size, lineHeight}
+  requirementNotes    String?   @db.Text
+  isPublic            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  documents           Document[]
+
+  @@unique([university, name])
+  @@index([university])
+}
+
+// ============================================================================
+// PLAGIARISM & AI FEATURES
+// ============================================================================
+
+model PlagiarismScan {
+  id                    String    @id @default(cuid())
+  documentId            String
+  status                String    @default("PENDING") // PENDING, COMPLETED, FAILED
+  similarityPercentage  Float?    // 0-100
+  matchedSources        Json      @default("[]") // Array of matched sources
+  flaggedSections       Json      @default("[]") // Problematic text sections
+  reportUrl             String?
+  scanDate              DateTime?
+  createdAt             DateTime  @default(now())
+
+  document              Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([status])
+}
+
+model AIChat {
+  id                String    @id @default(cuid())
+  userId            String    @db.Uuid
+  documentId        String?
+  conversationId    String?   // Group related messages
+  role              String    // "user" or "assistant"
+  content           String    @db.Text
+  model             String    // Which AI model (claude, gpt-4, llama, etc.)
+  tokensUsed        Int       @default(0)
+  createdAt         DateTime  @default(now())
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document          Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+model AIUsageStats {
+  id                    String    @id @default(cuid())
+  userId                String    @unique @db.Uuid
+  suggestionsUsedToday  Int       @default(0)
+  scansUsedToday        Int       @default(0)
+  chatsToday            Int       @default(0)
+  tokensUsedToday       Int       @default(0)
+  lastResetDate         DateTime  @default(now())
+  totalSuggestions      Int       @default(0)
+  totalScans            Int       @default(0)
+  totalTokens           Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// PAYMENT & SUBSCRIPTION TRACKING
+// ============================================================================
+
+model SubscriptionPlan {
+  id              String    @id @default(cuid())
+  tier            String    @unique // FREE, PRO, PREMIUM, ENTERPRISE
+  monthlyPrice    Float     @default(0)
+  yearlyPrice     Float     @default(0)
+  aiSuggestions   Int       @default(50) // per month
+  plagiarismScans Int       @default(1) // per month
+  maxDocuments    Int       @default(10)
+  maxCollaborators Int      @default(0)
+  features        String[]  // JSON array of feature names
+  description     String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tier])
+}
+
+model PaymentTransaction {
+  id                    String    @id @default(cuid())
+  userId                String    @db.Uuid
+  stripePaymentIntentId String?   @unique
+  amount                Float
+  currency              String    @default("USD")
+  status                String    @default("pending") // pending, succeeded, failed, cancelled
+  description           String?
+  invoiceUrl            String?
+  createdAt             DateTime  @default(now())
+
+  @@index([userId])
+  @@index([stripePaymentIntentId])
+  @@index([status])
+}
+
+// ============================================================================
+// ANALYTICS & TRACKING
+// ============================================================================
+
+model UserAnalytics {
+  id                    String    @id @default(cuid())
+  userId                String    @unique @db.Uuid
+  totalDocumentsCreated Int       @default(0)
+  totalWordsWritten     Int       @default(0)
+  totalTimeSpent        Int       @default(0) // in minutes
+  lastActiveDate        DateTime?
+  averagePlagiarismScore Float?   @default(0)
+  preferredAIModel      String    @default("claude-3-sonnet")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([lastActiveDate])
+}
+
+model WritingFeedback {
+  id                String    @id @default(cuid())
+  documentId        String
+  userId            String    @db.Uuid
+  type              String    // "grammar", "clarity", "tone", "structure"
+  text              String    @db.Text
+  suggestion        String?   @db.Text
+  severity          String    @default("low") // low, medium, high
+  characterStart    Int
+  characterEnd      Int
+  isResolved        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([isResolved])
+}
+
 
