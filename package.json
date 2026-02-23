@@ -3,14 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node -r dotenv/config node_modules/.bin/keystone build --no-ui",
-    "dev": "npm run predev && npm run migrate && next dev",
-    "prebuild": "node -r dotenv/config node_modules/.bin/keystone build --no-ui",
-    "build": "npm run prebuild && npm run migrate && next build",
+    "dev": "keystone build --no-ui && npm run migrate && next dev",
+    "build": "keystone build --no-ui && npm run migrate && next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate:gen": "node -r dotenv/config node_modules/.bin/keystone build --no-ui && tsx features/keystone/view-order/generate-view-order.ts && keystone prisma migrate dev",
-    "migrate": "node -r dotenv/config node_modules/.bin/prisma migrate deploy"
+    "migrate:gen": "keystone build --no-ui && tsx features/keystone/view-order/generate-view-order.ts && keystone prisma migrate dev",
+    "migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.13",
