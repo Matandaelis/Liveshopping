@@ -1,128 +1,53 @@
-// PRISMA SCHEMA DISABLED FOR PRODUCTION BUILD
-// The datasource is commented out to prevent DATABASE_URL validation errors during Vercel build
-// When ready to enable: uncomment datasource/generator, set DATABASE_URL env var, and run: npx prisma generate
+// ============================================================================
+// PRISMA SCHEMA - COMPLETELY DISABLED FOR PRODUCTION BUILD
+// ============================================================================
+// 
+// This schema file has been disabled to prevent Prisma validation errors
+// during Next.js build. The application runs WITHOUT database for now.
+//
+// TO RE-ENABLE DATABASE SUPPORT:
+// 1. Configure DATABASE_URL environment variable in Vercel
+// 2. Uncomment the datasource and generator sections below
+// 3. Run: npx prisma generate
+// 4. Run: npx prisma db push
+// 5. Re-enable PrismaClient imports in lib/db.ts, lib/stripe.ts, lib/subscriptions.ts
+//
+// ============================================================================
 
+// DO NOT UNCOMMENT - WILL BREAK BUILD IF DATABASE_URL IS NOT SET
 // datasource postgresql {
 //   url      = env("DATABASE_URL")
 //   provider = "postgresql"
 // }
 
+// DO NOT UNCOMMENT - WILL BREAK BUILD IF DATABASE_URL IS NOT SET
 // generator client {
 //   provider = "prisma-client-js"
 // }
 
-// NOTE: Prisma client generation is disabled. 
-// To re-enable database support:
-// 1. Uncomment the datasource and generator above
-// 2. Add DATABASE_URL to Vercel environment variables
-// 3. Run: npx prisma generate
-// 4. Implement database queries in API routes using the generated client
-
-// ThesisAI Domain Models (in public schema, integrates with neon_auth schema)
+// MODELS BELOW ARE FOR REFERENCE ONLY - NOT CURRENTLY GENERATED
+// Replace this entire file with the proper schema when enabling database
 
 model Document {
-  id                String    @id @default(cuid())
-  userId            String    @db.Uuid // References neon_auth.user.id
-  title             String
-  content           Json      @default("[]")
-  wordCount         Int       @default(0)
-  status            String    @default("DRAFT") // DRAFT, SUBMITTED, ARCHIVED
-  templateId        String?
-  template          ThesisTemplate? @relation("Template_documents", fields: [templateId], references: [id], onDelete: SetNull)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  citations         Citation[] @relation("Document_citations")
-  plagiarismScans   PlagiarismScan[] @relation("Document_plagiarism")
-
-  @@index([userId])
-  @@index([status])
-  @@map("documents")
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Subscription {
-  id                      String    @id @default(cuid())
-  userId                  String    @unique @db.Uuid // References neon_auth.user.id
-  tier                    String    @default("FREE") // FREE, PRO, PREMIUM, ENTERPRISE
-  stripeSubscriptionId    String?   @unique
-  stripeCustomerId        String?
-  status                  String    @default("ACTIVE") // ACTIVE, CANCELED, EXPIRED
-  startDate               DateTime  @default(now())
-  endDate                 DateTime?
-  renewalDate             DateTime?
-  aiSuggestionsUsed       Int       @default(0)
-  plagiarismScansUsed     Int       @default(0)
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-
-  @@index([userId])
-  @@index([stripeSubscriptionId])
-  @@map("subscriptions")
+  id     String @id @default(cuid())
+  userId String @unique
+  tier   String @default("FREE")
 }
 
 model Citation {
-  id                String    @id @default(cuid())
-  documentId        String
-  document          Document  @relation("Document_citations", fields: [documentId], references: [id], onDelete: Cascade)
-  title             String
-  authors           String?
-  publicationYear   Int?
-  source            String?
-  url               String?
-  doi               String?
-  citationStyle     String    @default("APA") // APA, MLA, CHICAGO, HARVARD
-  formattedText     String?
-  createdAt         DateTime  @default(now())
-
-  @@index([documentId])
-  @@map("citations")
-}
-
-model ThesisTemplate {
-  id                String    @id @default(cuid())
-  name              String
-  university        String?   // KU, KEMU, MKU, LAIKIPIA
-  country           String    @default("Kenya")
-  sections          Json      @default("[]") // Array of section names and requirements
-  marginSettings    Json      @default("{}") // {top, bottom, left, right}
-  fontSettings      Json      @default("{}") // {family, size, lineHeight}
-  requirementNotes  String?
-  isPublic          Boolean   @default(true)
-  documents         Document[] @relation("Template_documents")
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([university])
-  @@map("thesis_templates")
-}
-
-model PlagiarismScan {
-  id                    String    @id @default(cuid())
-  documentId            String
-  document              Document  @relation("Document_plagiarism", fields: [documentId], references: [id], onDelete: Cascade)
-  scanStatus            String    @default("PENDING") // PENDING, COMPLETED, FAILED
-  similarityPercentage  Decimal?  @db.Decimal(5, 2)
-  matchedSources        Json      @default("[]") // Array of matched source objects
-  reportUrl             String?
-  scanDate              DateTime?
-  createdAt             DateTime  @default(now())
-
-  @@index([documentId])
-  @@map("plagiarism_scans")
-}
-
-model AIUsageStats {
-  id                    String    @id @default(cuid())
-  userId                String    @unique @db.Uuid // References neon_auth.user.id
-  suggestionsUsedToday  Int       @default(0)
-  scansUsedToday        Int       @default(0)
-  chatsToday            Int       @default(0)
-  lastResetDate         DateTime  @default(now())
-  totalSuggestions      Int       @default(0)
-  totalScans            Int       @default(0)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-
-  @@index([userId])
-  @@map("ai_usage_stats")
+  id         String @id @default(cuid())
+  documentId String
+  title      String
+  authors    String?
+  year       Int?
 }
 
