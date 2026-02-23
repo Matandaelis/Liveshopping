@@ -3,6 +3,9 @@ import { isSignedIn } from '@keystone-6/core/access'
 import { relationship, integer, timestamp } from '@keystone-6/core/fields'
 
 export const UserStats = list({
+  graphql: {
+    plural: 'UserStatistics',
+  },
   access: {
     operation: {
       query: ({ session }) => !!session,
