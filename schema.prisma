@@ -1,27 +1,24 @@
-// SCHEMA DISABLED - Prisma validation disabled for now
-// This prevents DATABASE_URL errors during development
-// To enable: Uncomment the datasource and models below, set DATABASE_URL, and run: npx prisma generate
+// PRISMA SCHEMA DISABLED FOR PRODUCTION BUILD
+// The datasource is commented out to prevent DATABASE_URL validation errors during Vercel build
+// When ready to enable: uncomment datasource/generator, set DATABASE_URL env var, and run: npx prisma generate
 
 // datasource postgresql {
-//   url               = env("DATABASE_URL")
-//   provider          = "postgresql"
+//   url      = env("DATABASE_URL")
+//   provider = "postgresql"
 // }
 
 // generator client {
 //   provider = "prisma-client-js"
 // }
 
-// Placeholder - schema generation deferred
-model Placeholder {
-  id String @id @default(cuid())
-}
+// NOTE: Prisma client generation is disabled. 
+// To re-enable database support:
+// 1. Uncomment the datasource and generator above
+// 2. Add DATABASE_URL to Vercel environment variables
+// 3. Run: npx prisma generate
+// 4. Implement database queries in API routes using the generated client
 
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-// ThesisAI Domain Models (in public schema)
+// ThesisAI Domain Models (in public schema, integrates with neon_auth schema)
 
 model Document {
   id                String    @id @default(cuid())
@@ -128,3 +125,4 @@ model AIUsageStats {
   @@index([userId])
   @@map("ai_usage_stats")
 }
+

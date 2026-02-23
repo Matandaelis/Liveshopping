@@ -1,9 +1,11 @@
 import Stripe from 'stripe';
-import { PrismaClient } from '@prisma/client';
+// Prisma disabled during build - DATABASE_URL not configured
+// import { PrismaClient } from '@prisma/client';
 import { createUserSubscription, updateUserStats } from './subscriptions';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
+// TODO: Enable after DATABASE_URL is set in environment
 
 export async function handleStripeWebhook(event: Stripe.Event) {
   try {

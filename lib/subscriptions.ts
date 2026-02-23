@@ -1,6 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+// Prisma disabled during build - DATABASE_URL not configured
+// import { PrismaClient } from '@prisma/client';
+// const prisma = new PrismaClient();
 
-const prisma = new PrismaClient();
+// TODO: Enable after DATABASE_URL is set in environment
 
 export interface SubscriptionTierFeatures {
   FREE: {
