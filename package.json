@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "keystone build --no-ui && npm run migrate && next dev",
+    "dev": "NODE_OPTIONS='--require dotenv/config' keystone build --no-ui && npm run migrate && next dev",
     "build": "NODE_OPTIONS='--require dotenv/config' keystone build --no-ui && npm run migrate && next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate:gen": "keystone build --no-ui && tsx features/keystone/view-order/generate-view-order.ts && keystone prisma migrate dev",
+    "migrate:gen": "NODE_OPTIONS='--require dotenv/config' keystone build --no-ui && tsx features/keystone/view-order/generate-view-order.ts && keystone prisma migrate dev",
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
