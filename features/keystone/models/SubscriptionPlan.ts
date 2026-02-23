@@ -1,7 +1,6 @@
 import { list } from '@keystone-6/core'
-import { allOperations, isSignedIn } from '@keystone-6/core/access'
-import { checkbox, decimal, integer, relationship, select, text, timestamp, json } from '@keystone-6/core/fields'
-import { isAdmin } from '../access'
+import { checkbox, decimal, integer, relationship, select, text, json } from '@keystone-6/core/fields'
+import { isAdmin, permissions } from '../access'
 
 export const SubscriptionPlan = list({
   access: {

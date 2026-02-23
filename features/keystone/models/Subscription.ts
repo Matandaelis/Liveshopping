@@ -1,7 +1,6 @@
 import { list } from '@keystone-6/core'
-import { allOperations, isSignedIn } from '@keystone-6/core/access'
 import { checkbox, relationship, select, text, timestamp } from '@keystone-6/core/fields'
-import { isAdmin } from '../access'
+import { isAdmin, permissions } from '../access'
 
 export const Subscription = list({
   access: {
@@ -15,7 +14,7 @@ export const Subscription = list({
       query: ({ session }) => 
         session?.data?.role?.canManagePeople 
           ? true 
-          : { userId: { equals: session?.itemId } },
+          : { user: { id: { equals: session?.itemId } } },
     },
   },
   fields: {
