@@ -167,33 +167,35 @@ CREATE TABLE IF NOT EXISTS "PaymentTransaction" (
 );
 
 -- CreateIndex
-CREATE INDEX "Subscription_userId_idx" ON "Subscription"("userId");
-CREATE INDEX "Subscription_status_idx" ON "Subscription"("status");
-CREATE INDEX "Document_userId_idx" ON "Document"("userId");
-CREATE INDEX "Document_status_idx" ON "Document"("status");
-CREATE INDEX "Document_templateId_idx" ON "Document"("templateId");
-CREATE INDEX "Citation_documentId_idx" ON "Citation"("documentId");
-CREATE INDEX "WritingFeedback_documentId_idx" ON "WritingFeedback"("documentId");
-CREATE INDEX "WritingFeedback_userId_idx" ON "WritingFeedback"("userId");
-CREATE INDEX "PlagiarismScan_documentId_idx" ON "PlagiarismScan"("documentId");
-CREATE INDEX "AIChat_userId_idx" ON "AIChat"("userId");
-CREATE INDEX "AIChat_documentId_idx" ON "AIChat"("documentId");
-CREATE INDEX "UserStats_userId_idx" ON "UserStats"("userId");
-CREATE INDEX "PaymentTransaction_userId_idx" ON "PaymentTransaction"("userId");
-CREATE INDEX "PaymentTransaction_subscriptionId_idx" ON "PaymentTransaction"("subscriptionId");
+CREATE INDEX IF NOT EXISTS "Subscription_userId_idx" ON "Subscription"("userId");
+CREATE INDEX IF NOT EXISTS "Subscription_status_idx" ON "Subscription"("status");
+CREATE INDEX IF NOT EXISTS "Document_userId_idx" ON "Document"("userId");
+CREATE INDEX IF NOT EXISTS "Document_status_idx" ON "Document"("status");
+CREATE INDEX IF NOT EXISTS "Document_templateId_idx" ON "Document"("templateId");
+CREATE INDEX IF NOT EXISTS "Citation_documentId_idx" ON "Citation"("documentId");
+CREATE INDEX IF NOT EXISTS "WritingFeedback_documentId_idx" ON "WritingFeedback"("documentId");
+CREATE INDEX IF NOT EXISTS "WritingFeedback_userId_idx" ON "WritingFeedback"("userId");
+CREATE INDEX IF NOT EXISTS "PlagiarismScan_documentId_idx" ON "PlagiarismScan"("documentId");
+CREATE INDEX IF NOT EXISTS "AIChat_userId_idx" ON "AIChat"("userId");
+CREATE INDEX IF NOT EXISTS "AIChat_documentId_idx" ON "AIChat"("documentId");
+CREATE INDEX IF NOT EXISTS "UserStats_userId_idx" ON "UserStats"("userId");
+CREATE INDEX IF NOT EXISTS "PaymentTransaction_userId_idx" ON "PaymentTransaction"("userId");
+CREATE INDEX IF NOT EXISTS "PaymentTransaction_subscriptionId_idx" ON "PaymentTransaction"("subscriptionId");
 
 -- Add columns to User if they don't exist
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "subscriptionId" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "subscriptionTier" TEXT DEFAULT 'FREE';
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "stripeCustomerId" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "stripeCustomerId" TEXT UNIQUE;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "university" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "userRole" TEXT DEFAULT 'STUDENT';
 
--- Add unique constraint if not exists
-ALTER TABLE "User" ADD CONSTRAINT "User_stripeCustomerId_key" UNIQUE ("stripeCustomerId");
-
--- Add foreign key if it doesn't exist
-ALTER TABLE "User" ADD CONSTRAINT "User_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "Subscription"("id") ON DELETE SET NULL;
+-- Add foreign key if it doesn't exist (PostgreSQL doesn't support IF NOT EXISTS for FKs, so we wrap in a transaction)
+DO $$ 
+BEGIN
+  ALTER TABLE "User" ADD CONSTRAINT "User_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "Subscription"("id") ON DELETE SET NULL;
+EXCEPTION WHEN others THEN
+  NULL;
+END $$;
 
 -- Create indices on User table if not exist
 CREATE INDEX IF NOT EXISTS "User_subscriptionId_idx" ON "User"("subscriptionId");
