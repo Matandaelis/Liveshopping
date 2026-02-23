@@ -1,15 +1,14 @@
-// Database stub - Prisma disabled for now
-// When DATABASE_URL is properly configured and schema is generated, uncomment the PrismaClient below
+import { PrismaClient } from '@prisma/client'
 
-// TODO: Enable when database schema is ready
-// import { PrismaClient } from '@prisma/client'
-// const prisma = new PrismaClient()
+const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
-// For now, provide stub functions that allow the app to run
-export const prisma = {
-  $disconnect: async () => {},
-  $queryRaw: async () => null,
-} as any
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ['query', 'error', 'warn'],
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export async function runWithErrorHandling<T>(
   fn: () => Promise<T>,
@@ -24,8 +23,13 @@ export async function runWithErrorHandling<T>(
 }
 
 export async function checkDatabaseConnection(): Promise<boolean> {
-  console.log('[v0] Database connection check skipped (Prisma disabled)')
-  return true
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    return true
+  } catch {
+    return false
+  }
 }
 
 export default prisma
+

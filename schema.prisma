@@ -1,30 +1,11 @@
-// ============================================================================
-// PRISMA SCHEMA - THESIS AI PLATFORM
-// ============================================================================
-// 
-// IMPORTANT: Database is currently DISABLED for build compatibility
-// 
-// TO ENABLE DATABASE (Phase 1 of Implementation):
-// 1. Set DATABASE_URL in Vercel environment variables
-// 2. Uncomment lines 17-23 (datasource and generator)
-// 3. Run: npx prisma generate
-// 4. Run: npx prisma db push
-// 5. Re-enable PrismaClient in: lib/db.ts, lib/stripe.ts, lib/subscriptions.ts
-// 6. Redeploy to Vercel
-//
-// This schema integrates with Stack Auth (neon_auth schema) for user auth
-// ============================================================================
+datasource postgresql {
+  url      = env("DATABASE_URL")
+  provider = "postgresql"
+}
 
-// STEP 1: UNCOMMENT THESE LINES WHEN DATABASE_URL IS CONFIGURED
-// datasource postgresql {
-//   url      = env("DATABASE_URL")
-//   provider = "postgresql"
-// }
-// 
-// STEP 2: UNCOMMENT THIS WHEN DATABASE_URL IS SET
-// generator client {
-//   provider = "prisma-client-js"
-// }
+generator client {
+  provider = "prisma-client-js"
+}
 
 // ============================================================================
 // USER & SUBSCRIPTION MODELS

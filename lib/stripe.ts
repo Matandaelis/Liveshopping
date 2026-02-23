@@ -1,13 +1,124 @@
-import Stripe from 'stripe';
-// Prisma disabled during build - DATABASE_URL not configured
-// import { PrismaClient } from '@prisma/client';
-import { createUserSubscription, updateUserStats } from './subscriptions';
+import Stripe from 'stripe'
+import { prisma } from './db'
+import { createUserSubscription } from './subscriptions'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-// const prisma = new PrismaClient();
-// TODO: Enable after DATABASE_URL is set in environment
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function handleStripeWebhook(event: Stripe.Event) {
+  try {
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription
+
+        const subscriptionData = await prisma.subscription.findFirst({
+          where: { stripeSubscriptionId: subscription.id },
+        })
+
+        if (!subscriptionData) {
+          await prisma.subscription.create({
+            data: {
+              userId: subscription.metadata?.userId || '',
+              tier: subscription.metadata?.tier || 'PRO',
+              stripeCustomerId: subscription.customer as string,
+              stripeSubscriptionId: subscription.id,
+              status: 'ACTIVE',
+            },
+          })
+        }
+        break
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription
+
+        await prisma.subscription.updateMany({
+          where: { stripeSubscriptionId: subscription.id },
+          data: { status: 'CANCELED', cancelledAt: new Date() },
+        })
+        break
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice
+
+        const subscription = await prisma.subscription.findFirst({
+          where: { stripeSubscriptionId: invoice.subscription as string },
+        })
+
+        if (subscription) {
+          await prisma.paymentTransaction.create({
+            data: {
+              userId: subscription.userId,
+              stripePaymentIntentId: (invoice.payment_intent as string) || undefined,
+              amount: invoice.amount_paid / 100,
+              currency: invoice.currency?.toUpperCase() || 'USD',
+              status: 'succeeded',
+              description: `Payment for ${subscription.tier} plan`,
+              invoiceUrl: invoice.hosted_invoice_url || undefined,
+            },
+          })
+        }
+        break
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice
+
+        const subscription = await prisma.subscription.findFirst({
+          where: { stripeSubscriptionId: invoice.subscription as string },
+        })
+
+        if (subscription) {
+          await prisma.paymentTransaction.create({
+            data: {
+              userId: subscription.userId,
+              stripePaymentIntentId: (invoice.payment_intent as string) || undefined,
+              amount: invoice.amount_paid / 100,
+              currency: invoice.currency?.toUpperCase() || 'USD',
+              status: 'failed',
+            },
+          })
+        }
+        break
+      }
+    }
+
+    return { received: true }
+  } catch (error) {
+    console.error('Error handling Stripe webhook:', error)
+    throw error
+  }
+}
+
+export async function createCheckoutSession(userId: string, tier: string = 'PRO') {
+  const priceMap: Record<string, string> = {
+    PRO: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_pro_monthly',
+    PREMIUM: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_PRICE_ID || 'price_premium_monthly',
+    ENTERPRISE: process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID || 'price_enterprise_monthly',
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (!user?.email) throw new Error('User not found')
+
+  const session = await stripe.checkout.sessions.create({
+    customer_email: user.email,
+    mode: 'subscription',
+    line_items: [{ price: priceMap[tier], quantity: 1 }],
+    success_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?tier=${tier}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/pricing`,
+    metadata: { userId, tier },
+  })
+
+  return session.id
+}
+
+export function getStripeWebhookSecret(): string {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!secret) throw new Error('STRIPE_WEBHOOK_SECRET is not set')
+  return secret
+}
+
   try {
     switch (event.type) {
       case 'customer.subscription.created':
