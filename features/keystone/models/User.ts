@@ -89,8 +89,45 @@ export const User = list({
         createView: {
           fieldMode: args => (permissions.canManageAllTodos(args) ? 'edit' : 'hidden'),
         },
-        // itemView: { fieldMode: 'read' },
       },
+    }),
+    // Subscription fields
+    subscription: relationship({
+      ref: 'Subscription.user',
+      db: { isNullable: true },
+      access: {
+        create: permissions.canManagePeople,
+        update: ({ session, item }) =>
+          permissions.canManagePeople({ session }) || session?.itemId === item.id,
+      },
+    }),
+    subscriptionTier: text({ defaultValue: 'FREE' }),
+    stripeCustomerId: text({ 
+      db: { isNullable: true, map: 'stripeCustomerId' },
+      isIndexed: 'unique',
+    }),
+    // Profile fields
+    university: text({ db: { isNullable: true } }),
+    userRole: text({ defaultValue: 'STUDENT' }),
+    // Relationships
+    documents: relationship({
+      ref: 'Document.user',
+      many: true,
+    }),
+    writingFeedbacks: relationship({
+      ref: 'WritingFeedback.user',
+      many: true,
+    }),
+    aiChats: relationship({
+      ref: 'AIChat.user',
+      many: true,
+    }),
+    userStats: relationship({
+      ref: 'UserStats.user',
+    }),
+    paymentTransactions: relationship({
+      ref: 'PaymentTransaction.user',
+      many: true,
     }),
   },
 });

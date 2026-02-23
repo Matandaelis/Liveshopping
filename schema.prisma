@@ -12,18 +12,226 @@ generator client {
 }
 
 model User {
-  id                      String    @id @default(cuid())
-  name                    String    @default("")
-  email                   String    @unique @default("")
+  id                      String                @id @default(cuid())
+  name                    String                @default("")
+  email                   String                @unique @default("")
   password                String
-  role                    Role?     @relation("User_role", fields: [roleId], references: [id])
-  roleId                  String?   @map("role")
-  tasks                   Todo[]    @relation("Todo_assignedTo")
+  role                    Role?                 @relation("User_role", fields: [roleId], references: [id])
+  roleId                  String?               @map("role")
+  tasks                   Todo[]                @relation("Todo_assignedTo")
   passwordResetToken      String?
   passwordResetIssuedAt   DateTime?
   passwordResetRedeemedAt DateTime?
+  
+  // Subscription fields
+  subscriptionId          String?
+  subscription            Subscription?         @relation("User_subscription", fields: [subscriptionId], references: [id])
+  subscriptionTier        String                @default("FREE")
+  stripeCustomerId        String?               @unique
+  
+  // Profile fields
+  university              String?
+  userRole                String                @default("STUDENT")
+  
+  // Relationships
+  documents               Document[]            @relation("User_documents")
+  writingFeedbacks        WritingFeedback[]     @relation("User_feedback")
+  aiChats                 AIChat[]              @relation("User_aiChats")
+  userStats               UserStats?            @relation("User_stats")
+  paymentTransactions     PaymentTransaction[]  @relation("User_payments")
 
   @@index([roleId])
+  @@index([subscriptionId])
+  @@index([stripeCustomerId])
+}
+
+// Subscription Management Models
+model SubscriptionPlan {
+  id                String        @id @default(cuid())
+  name              String
+  tier              String        @unique
+  price             Decimal       @default(0) @db.Decimal(10, 2)
+  billingPeriod     String        @default("MONTHLY")
+  description       String?
+  features          Json          @default("[]")
+  maxDocuments      Int           @default(-1)
+  maxAISuggestions  Int           @default(-1)
+  maxPlagiarismScans Int         @default(-1)
+  hasCollaboration  Boolean       @default(false)
+  hasTemplates      Boolean       @default(false)
+  supportLevel      String        @default("NONE")
+  subscriptions     Subscription[] @relation("Plan_subscriptions")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([tier])
+}
+
+model Subscription {
+  id                      String    @id @default(cuid())
+  userId                  String
+  user                    User      @relation("User_subscription", fields: [userId], references: [id], onDelete: Cascade)
+  planId                  String
+  plan                    SubscriptionPlan @relation("Plan_subscriptions", fields: [planId], references: [id])
+  status                  String    @default("ACTIVE")
+  startDate               DateTime  @default(now())
+  endDate                 DateTime?
+  renewalDate             DateTime?
+  stripeSubscriptionId    String?   @unique
+  stripeCustomerId        String?
+  autoRenew               Boolean   @default(true)
+  paymentTransactions     PaymentTransaction[] @relation("Subscription_payments")
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@unique([userId])
+  @@index([userId])
+  @@index([status])
+}
+
+// Thesis & Document Management Models
+model ThesisTemplate {
+  id                  String    @id @default(cuid())
+  name                String
+  university          String?
+  country             String    @default("Kenya")
+  department          String?
+  sections            Json      @default("[]")
+  requirementNotes    String?
+  marginSettings      Json      @default("{}")
+  fontSettings        Json      @default("{}")
+  isPublic            Boolean   @default(true)
+  documents           Document[] @relation("Template_documents")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([country])
+  @@index([university])
+}
+
+model Document {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation("User_documents", fields: [userId], references: [id], onDelete: Cascade)
+  title               String
+  templateId          String?
+  template            ThesisTemplate? @relation("Template_documents", fields: [templateId], references: [id], onDelete: SetNull)
+  content             Json      @default("[]")
+  wordCount           Int       @default(0)
+  status              String    @default("DRAFT")
+  version             Int       @default(1)
+  lastModified        DateTime  @default(now())
+  collaborators       Json      @default("[]")
+  citations           Citation[] @relation("Document_citations")
+  writingFeedbacks    WritingFeedback[] @relation("Document_feedback")
+  plagiarismScans     PlagiarismScan[] @relation("Document_plagiarism")
+  aiChats             AIChat[]  @relation("Document_aiChats")
+  createdAt           DateTime  @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@index([templateId])
+}
+
+model Citation {
+  id                  String    @id @default(cuid())
+  documentId          String
+  document            Document  @relation("Document_citations", fields: [documentId], references: [id], onDelete: Cascade)
+  title               String
+  authors             String?
+  publicationYear     Int?
+  source              String?
+  url                 String?
+  doi                 String?
+  citationStyle       String    @default("APA")
+  formattedText       String?
+  metadata            Json      @default("{}")
+  createdAt           DateTime  @default(now())
+
+  @@index([documentId])
+}
+
+model WritingFeedback {
+  id                  String    @id @default(cuid())
+  documentId          String
+  document            Document  @relation("Document_feedback", fields: [documentId], references: [id], onDelete: Cascade)
+  userId              String?
+  user                User?     @relation("User_feedback", fields: [userId], references: [id], onDelete: SetNull)
+  feedbackType        String?
+  text                String
+  category            String?
+  severity            String?
+  startPosition       Int?
+  endPosition         Int?
+  suggestedImprovement String?
+  isResolved          Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+
+  @@index([documentId])
+  @@index([userId])
+}
+
+model PlagiarismScan {
+  id                  String    @id @default(cuid())
+  documentId          String
+  document            Document  @relation("Document_plagiarism", fields: [documentId], references: [id], onDelete: Cascade)
+  scanStatus          String    @default("PENDING")
+  similarityPercentage Decimal?  @db.Decimal(5, 2)
+  matchedSources      Json      @default("[]")
+  reportUrl           String?
+  scanDate            DateTime?
+  createdAt           DateTime  @default(now())
+
+  @@index([documentId])
+}
+
+model AIChat {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation("User_aiChats", fields: [userId], references: [id], onDelete: Cascade)
+  documentId          String?
+  document            Document? @relation("Document_aiChats", fields: [documentId], references: [id], onDelete: SetNull)
+  model               String    @default("GROQ")
+  title               String    @default("New Conversation")
+  messages            Json      @default("[]")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([documentId])
+}
+
+model UserStats {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation("User_stats", fields: [userId], references: [id], onDelete: Cascade)
+  documentsCreated    Int       @default(0)
+  aiSuggestionsUsed   Int       @default(0)
+  plagiarismScansUsed Int       @default(0)
+  totalWritingTime    Int       @default(0)
+  lastActivityDate    DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model PaymentTransaction {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation("User_payments", fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId      String?
+  subscription        Subscription? @relation("Subscription_payments", fields: [subscriptionId], references: [id], onDelete: SetNull)
+  amount              Decimal   @db.Decimal(10, 2)
+  currency            String    @default("USD")
+  status              String    @default("PENDING")
+  stripePaymentIntentId String?
+  stripeInvoiceId     String?
+  createdAt           DateTime  @default(now())
+  completedAt         DateTime?
+
+  @@index([userId])
+  @@index([subscriptionId])
 }
 
 model Role {
