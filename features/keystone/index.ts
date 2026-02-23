@@ -1,6 +1,5 @@
 import { createAuth } from "@keystone-6/auth";
 import { config } from "@keystone-6/core";
-import "dotenv/config";
 import { models } from "./models";
 import { statelessSessions } from "@keystone-6/core/session";
 import { extendGraphqlSchema } from "./mutations";
